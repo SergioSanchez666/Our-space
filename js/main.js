@@ -11,7 +11,6 @@
     startDate: '2022-05-05T00:00:00', // 5 de mayo de 2022
     maxPhotoSizeKB: 800,
     storageKeys: {
-      messages: 'pace_messages',
       photos: 'pace_photos',
       config: 'pace_config'
     }
@@ -19,6 +18,14 @@
 
   const $ = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
+
+  // ----- Supabase (mensajes + storage) -----
+  const SUPABASE_URL = 'https://bwikogxafcyfdohlqsxk.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_0Gaz8klFzUhibpoXzKDiCA_yCLuaDjb';
+  const supabaseClient =
+    (window.supabase && typeof window.supabase.createClient === 'function')
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null;
 
   // ----- Contador -----
   function getStartDate() {
@@ -54,19 +61,7 @@
   setInterval(updateCounter, 1000);
   updateCounter();
 
-  // ----- Mensajes: almacenamiento y formato -----
-  function getMessages() {
-    try {
-      const raw = localStorage.getItem(CONFIG.storageKeys.messages);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  }
-
-  function setMessages(list) {
-    localStorage.setItem(CONFIG.storageKeys.messages, JSON.stringify(list));
-  }
+  // ----- Mensajes: Supabase (DB + Storage) -----
 
   function escapeHtml(text) {
     const div = document.createElement('div');
@@ -84,63 +79,133 @@
   function renderMessages(list) {
     const listEl = $('#lista-mensajes');
     const query = ($('#buscar-mensajes')?.value || '').toLowerCase();
-    const onlyFav = $('#solo-favoritos')?.checked;
+    // Checkbox reservado para futuras mejoras
+    const _onlyFav = $('#solo-favoritos')?.checked;
 
-    let filtered = list;
-    if (query) filtered = filtered.filter(m => (m.text || '').toLowerCase().includes(query));
-    if (onlyFav) filtered = filtered.filter(m => m.favorite);
-
-    filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    let filtered = list || [];
+    if (query) {
+      filtered = filtered.filter(m =>
+        (m.contenido || '').toLowerCase().includes(query) ||
+        (m.nombre || '').toLowerCase().includes(query)
+      );
+    }
 
     listEl.innerHTML = filtered.map(m => {
-      const favClass = m.favorite ? ' mensaje-card favorito' : ' mensaje-card';
-      const favLabel = m.favorite ? 'Quitar de favoritos' : 'Marcar favorito';
+      const fecha = m.created_at ? new Date(m.created_at) : null;
       return `
-        <li class="${favClass.trim()}" data-id="${escapeHtml(m.id)}">
+        <li class="mensaje-card" data-id="${escapeHtml(String(m.id ?? ''))}">
           <div class="mensaje-card__header">
-            <span class="mensaje-card__fecha">${escapeHtml(new Date(m.date).toLocaleDateString('es-ES', { dateStyle: 'medium' }))}</span>
-            <div class="mensaje-card__acciones">
-              <button type="button" class="btn btn--icon" data-action="fav" title="${favLabel}" aria-label="${favLabel}">${m.favorite ? '★' : '☆'}</button>
-              <button type="button" class="btn btn--icon" data-action="edit" title="Editar" aria-label="Editar">✎</button>
-              <button type="button" class="btn btn--icon" data-action="delete" title="Eliminar" aria-label="Eliminar">🗑</button>
+            <div class="mensaje-card__meta">
+              <span class="mensaje-card__nombre">${escapeHtml(m.nombre || 'Anónimo')}</span>
+              <span class="mensaje-card__fecha">${escapeHtml(fecha ? fecha.toLocaleDateString('es-ES', { dateStyle: 'medium' }) : '')}</span>
             </div>
           </div>
-          <p class="mensaje-card__texto">${formatMessageText(m.text || '')}</p>
+          <p class="mensaje-card__texto">${formatMessageText(m.contenido || '')}</p>
+          ${m.imagen_url ? `<img class="mensaje-card__img" src="${escapeHtml(m.imagen_url)}" alt="Foto adjunta" loading="lazy">` : ''}
         </li>`;
     }).join('');
   }
 
+  function getNombrePorDefecto() {
+    try {
+      const raw = localStorage.getItem(CONFIG.storageKeys.config);
+      if (!raw) return 'Diego';
+      const cfg = JSON.parse(raw);
+      return (cfg?.nombre && String(cfg.nombre).trim()) ? String(cfg.nombre).trim() : 'Diego';
+    } catch {
+      return 'Diego';
+    }
+  }
+
+  async function enviarMensaje() {
+    if (!supabaseClient) {
+      alert('Supabase no está cargado. Revisa el script CDN.');
+      return;
+    }
+
+    const textarea = $('#mensaje-texto');
+    const fotoInput = $('#foto-input');
+    const contenido = (textarea?.value || '').trim();
+    if (!contenido) return;
+
+    const nombre = getNombrePorDefecto();
+    const file = fotoInput?.files?.[0] || null;
+
+    let imagenUrl = null;
+    if (file) {
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const safeExt = ext.match(/^[a-z0-9]+$/) ? ext : 'jpg';
+      const path = `mensajes/${Date.now()}-${Math.random().toString(16).slice(2)}.${safeExt}`;
+
+      const { error: uploadError } = await supabaseClient
+        .storage
+        .from('fotos')
+        .upload(path, file, { upsert: false, cacheControl: '3600' });
+
+      if (uploadError) {
+        alert('No se pudo subir la imagen. Asegúrate de que exista el bucket `fotos` y tenga permisos.');
+        return;
+      }
+
+      const { data: publicData } = supabaseClient
+        .storage
+        .from('fotos')
+        .getPublicUrl(path);
+
+      imagenUrl = publicData?.publicUrl || null;
+    }
+
+    const { error: insertError } = await supabaseClient
+      .from('mensajes')
+      .insert({ nombre, contenido, imagen_url: imagenUrl });
+
+    if (insertError) {
+      alert('No se pudo insertar en la tabla `mensajes`. Revisa columnas y RLS.');
+      return;
+    }
+
+    textarea.value = '';
+    if (fotoInput) fotoInput.value = '';
+    await cargarMensajes();
+  }
+
+  async function cargarMensajes() {
+    if (!supabaseClient) return;
+    const { data, error } = await supabaseClient
+      .from('mensajes')
+      .select('id,nombre,contenido,imagen_url,created_at')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      const listEl = $('#lista-mensajes');
+      if (listEl) {
+        listEl.innerHTML = '<li class="mensaje-card"><p class="mensaje-card__texto">No se pudieron cargar los mensajes.</p></li>';
+      }
+      return;
+    }
+
+    renderMessages(data || []);
+  }
+
   function initMessages() {
-    const list = getMessages();
-    renderMessages(list);
+    const form = $('#form-mensaje');
 
-    $('#form-mensaje').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const textarea = $('#mensaje-texto');
-      const text = (textarea.value || '').trim();
-      if (!text) return;
-      const list = getMessages();
-      list.unshift({
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-        text,
-        date: new Date().toISOString(),
-        favorite: false
-      });
-      setMessages(list);
-      renderMessages(list);
-      textarea.value = '';
-    });
-
-    $('#form-mensaje').querySelectorAll('.btn-toolbar[data-cmd]').forEach(btn => {
+    // UI de formato (simple: inserta tokens markdown)
+    form.querySelectorAll('.btn-toolbar[data-cmd]').forEach(btn => {
       btn.addEventListener('click', () => {
         const cmd = btn.dataset.cmd;
         const textarea = $('#mensaje-texto');
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selected = textarea.value.slice(start, end);
+        if (!selected) return;
+        const wrapper = cmd === 'bold' ? '**' : '_';
+        textarea.setRangeText(wrapper + selected + wrapper, start, end, 'end');
         textarea.focus();
-        document.execCommand(cmd, false, null);
       });
     });
 
-    $('#form-mensaje').querySelectorAll('.btn-toolbar[data-emoji]').forEach(btn => {
+    form.querySelectorAll('.btn-toolbar[data-emoji]').forEach(btn => {
       btn.addEventListener('click', () => {
         const textarea = $('#mensaje-texto');
         const emoji = btn.dataset.emoji || '❤️';
@@ -154,46 +219,15 @@
       });
     });
 
-    $('#buscar-mensajes').addEventListener('input', () => renderMessages(getMessages()));
-    $('#solo-favoritos').addEventListener('change', () => renderMessages(getMessages()));
-
-    $('#lista-mensajes').addEventListener('click', (e) => {
-      const card = e.target.closest('.mensaje-card');
-      if (!card) return;
-      const id = card.dataset.id;
-      const action = e.target.closest('[data-action]')?.dataset.action;
-      if (!action) return;
-      const list = getMessages();
-      const idx = list.findIndex(m => m.id === id);
-      if (idx === -1) return;
-
-      if (action === 'fav') {
-        list[idx].favorite = !list[idx].favorite;
-        setMessages(list);
-        renderMessages(list);
-      } else if (action === 'edit') {
-        const newText = prompt('Editar mensaje:', list[idx].text);
-        if (newText !== null && newText.trim() !== '') {
-          list[idx].text = newText.trim();
-          setMessages(list);
-          renderMessages(list);
-        }
-      } else if (action === 'delete') {
-        const modal = $('#modal-borrar');
-        modal.hidden = false;
-        const confirmar = () => {
-          list.splice(idx, 1);
-          setMessages(list);
-          renderMessages(list);
-          modal.hidden = true;
-          $('#modal-borrar-confirmar').removeEventListener('click', confirmar);
-        };
-        $('#modal-borrar-confirmar').addEventListener('click', confirmar);
-      }
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await enviarMensaje();
     });
 
-    $('#modal-borrar-cancelar').addEventListener('click', () => { $('#modal-borrar').hidden = true; });
-    $('#modal-borrar').querySelector('.modal__backdrop').addEventListener('click', () => { $('#modal-borrar').hidden = true; });
+    $('#buscar-mensajes')?.addEventListener('input', () => cargarMensajes());
+    $('#solo-favoritos')?.addEventListener('change', () => cargarMensajes());
+
+    cargarMensajes();
   }
 
   // ----- Galería: almacenamiento y compresión -----

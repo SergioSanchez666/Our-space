@@ -51,7 +51,7 @@
     <section id="mensajes" class="seccion mensajes" aria-label="Mensajes de amor">
       <div class="seccion__wrap">
         <h2 class="seccion__titulo">Mensajes de amor</h2>
-        <p class="seccion__intro">Escribe lo que sientes. Queda guardado solo en este dispositivo.</p>
+        <p class="seccion__intro">Escribe lo que sientes y acompáñalo con una foto.</p>
 
         <form id="form-mensaje" class="form-mensaje" aria-label="Nuevo mensaje">
           <div class="form-mensaje__toolbar" role="toolbar" aria-label="Formato">
@@ -60,7 +60,10 @@
             <button type="button" class="btn-toolbar" data-emoji="❤️" title="Corazón" aria-label="Insertar corazón">❤️</button>
           </div>
           <textarea id="mensaje-texto" class="form-mensaje__textarea" placeholder="Escribe tu mensaje..." rows="4" required></textarea>
-          <button type="submit" class="btn btn--primary">Guardar mensaje</button>
+          <div class="form-mensaje__row">
+            <input type="file" id="foto-input" accept="image/*" class="custom-file-upload" aria-label="Adjuntar foto">
+            <button type="submit" class="btn btn--primary" id="btn-enviar">Enviar</button>
+          </div>
         </form>
 
         <div class="mensajes__filtros">
@@ -133,6 +136,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

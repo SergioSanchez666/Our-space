@@ -380,3 +380,15 @@
     initGallery();
   });
 })();
+
+function closeWelcome() {
+  document.getElementById('welcome-overlay').style.display = 'none';
+  localStorage.setItem('welcomeShown', 'true');
+}
+
+// Al cargar la página, revisar si ya lo vio
+window.onload = function() {
+  if (localStorage.getItem('welcomeShown')) {
+    document.getElementById('welcome-overlay').style.display = 'none';
+  }
+}

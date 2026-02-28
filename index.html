@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pace - Página Web Romántica</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Lato:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="header">
+    <a href="#hero" class="header__logo" aria-label="Pace - Inicio">DIEGO</a>
+    <button type="button" class="header__menu-btn" aria-label="Abrir menú" aria-expanded="false">
+      <span class="header__menu-icon"></span>
+    </button>
+    <nav class="header__nav" aria-label="Navegación principal">
+      <ul class="header__nav-list">
+        <li><a href="#hero">Inicio</a></li>
+        <li><a href="#mensajes">Mensajes</a></li>
+        <li><a href="#galeria">Galería</a></li>
+        <li><a href="#fechas-especiales">Fechas</a></li>
+        <li><a href="#wishlist">Wishlist</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section id="hero" class="hero" aria-label="Sección principal">
+      <div class="hero__bg" role="img" aria-label="Imagen de fondo romántica"></div>
+      <div class="hero__content">
+        <h2 class="hero__title">Juntos desde</h2>
+        <div id="contador" class="contador" role="timer" aria-live="polite">
+          <span id="contador-dias" class="contador__value">0</span> días
+          <span id="contador-horas" class="contador__value">0</span> horas
+          <span id="contador-min" class="contador__value">0</span> min
+          <span id="contador-seg" class="contador__value">0</span> seg
+        </div>
+        <p class="hero__subtitle">Cada segundo a tu lado cuenta</p>
+      </div>
+    </section>
+
+    <section id="mensajes" class="seccion mensajes" aria-label="Mensajes de amor">
+      <div class="seccion__wrap">
+        <h2 class="seccion__titulo">Mensajes de amor</h2>
+        <p class="seccion__intro">Escribe lo que sientes. Queda guardado solo en este dispositivo.</p>
+
+        <form id="form-mensaje" class="form-mensaje" aria-label="Nuevo mensaje">
+          <div class="form-mensaje__toolbar" role="toolbar" aria-label="Formato">
+            <button type="button" class="btn-toolbar" data-cmd="bold" title="Negrita" aria-label="Negrita">B</button>
+            <button type="button" class="btn-toolbar" data-cmd="italic" title="Cursiva" aria-label="Cursiva">I</button>
+            <button type="button" class="btn-toolbar" data-emoji="❤️" title="Corazón" aria-label="Insertar corazón">❤️</button>
+          </div>
+          <textarea id="mensaje-texto" class="form-mensaje__textarea" placeholder="Escribe tu mensaje..." rows="4" required></textarea>
+          <button type="submit" class="btn btn--primary">Guardar mensaje</button>
+        </form>
+
+        <div class="mensajes__filtros">
+          <input type="search" id="buscar-mensajes" class="input-buscar" placeholder="Buscar mensajes..." aria-label="Buscar en mensajes">
+          <label class="checkbox-label">
+            <input type="checkbox" id="solo-favoritos" aria-label="Ver solo favoritos">
+            Solo favoritos
+          </label>
+        </div>
+
+        <ul id="lista-mensajes" class="lista-mensajes" aria-label="Lista de mensajes"></ul>
+      </div>
+    </section>
+
+    <section id="galeria" class="seccion galeria" aria-label="Galería de fotos">
+      <div class="seccion__wrap">
+        <h2 class="seccion__titulo">Nuestra galería</h2>
+        <p class="seccion__intro">Sube fotos o arrástralas aquí. Se guardan solo en tu dispositivo.</p>
+
+        <div id="galeria-drop" class="galeria__drop" aria-label="Zona de subida">
+          <input type="file" id="galeria-input" class="galeria__input" accept="image/jpeg,image/png,image/webp,image/gif" multiple aria-label="Seleccionar imágenes">
+          <p class="galeria__drop-text">Arrastra fotos aquí o haz clic para elegir</p>
+          <p id="galeria-progreso" class="galeria__progreso" aria-live="polite" hidden></p>
+        </div>
+
+        <div id="galeria-grid" class="galeria__grid" role="list"></div>
+      </div>
+    </section>
+
+    <section id="fechas-especiales" class="seccion fechas" aria-label="Fechas especiales">
+      <div class="seccion__wrap">
+        <h2 class="seccion__titulo">Fechas especiales</h2>
+        <p class="seccion__intro">Próximamente: cuenta regresiva y lista de fechas (en desarrollo).</p>
+      </div>
+    </section>
+
+    <section id="wishlist" class="seccion wishlist" aria-label="Wishlist compartida">
+      <div class="seccion__wrap">
+        <h2 class="seccion__titulo">Wishlist compartida</h2>
+        <p class="seccion__intro">Próximamente: lista de deseos en pareja (en desarrollo).</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p class="footer__texto">Hecho con <span aria-hidden="true">❤️</span> — Pace. Tus datos no salen de este dispositivo.</p>
+  </footer>
+
+  <!-- Lightbox galería -->
+  <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Ver imagen" hidden>
+    <button type="button" class="lightbox__cerrar" aria-label="Cerrar">&times;</button>
+    <button type="button" class="lightbox__prev" aria-label="Foto anterior">&lsaquo;</button>
+    <button type="button" class="lightbox__next" aria-label="Foto siguiente">&rsaquo;</button>
+    <div class="lightbox__content">
+      <img id="lightbox-img" src="" alt="" />
+      <p id="lightbox-caption" class="lightbox__caption"></p>
+    </div>
+  </div>
+
+  <!-- Modal confirmar borrar mensaje -->
+  <div id="modal-borrar" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-borrar-titulo" hidden>
+    <div class="modal__backdrop"></div>
+    <div class="modal__box">
+      <h3 id="modal-borrar-titulo" class="modal__titulo">¿Eliminar este mensaje?</h3>
+      <p class="modal__texto">No podrás deshacer esta acción.</p>
+      <div class="modal__acciones">
+        <button type="button" id="modal-borrar-cancelar" class="btn btn--secondary">Cancelar</button>
+        <button type="button" id="modal-borrar-confirmar" class="btn btn--danger">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
